@@ -1,0 +1,2 @@
+# jsStruct
+ Structure in JS
