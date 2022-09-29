@@ -1,4 +1,17 @@
 'use strict';
+/*
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray
+signed char: -127...127 (не -128...127; аналогично другие типы)
+unsigned char: 0...255 (= 28−1)
+signed short: -32767...32767
+unsigned short: 0...65535 (= 216−1)
+signed int: -32767...32767
+unsigned int: 0...65535 (= 216−1)
+signed long: -2147483647...2147483647
+unsigned long: 0...4294967295 (= 232−1)
+signed long long: -9223372036854775807...9223372036854775807
+unsigned long long: 0...18446744073709551615 (= 264−1)
+*/
 class TType {
     #name = undefined;
     get name() { return this.#name.split('\x01')[0]; }
