@@ -12,81 +12,42 @@ unsigned long: 0...4294967295 (= 232−1)
 signed long long: -9223372036854775807...9223372036854775807
 unsigned long long: 0...18446744073709551615 (= 264−1)
 */
-class TType {
-    #name = undefined;
-    get name() { return this.#name.split('\x01')[0]; }
-    get size() { return Number(this.#name.split('\x01')[1]).toFixed(0); }
-    pointerData = undefined;
-    constructor(name, ByteSize = 0) { this.#name = String(name).toLowerCase() + '\x01' + Number(ByteSize).toFixed(0); return this; }
-    toString() { return `Size : ${this.name} = ${this.size}`; }
-    toJSON() { return JSON.stringify({ size: this.size, name: this.name }); }
-}
-/**
- * Список типов и их размер
- */
-class TTypeList {
-    /** @type {Map<String,TType>} */
-    #list = new Map();
-    /** @param {TType} type @returns {TTypeList}*/
-    set add(type) { if (type.constructor.name == 'TType') { this.#list.set(type.name, type); } else { throw "Нужный тип данных TType"; }; return this; }
-    constructor() { }
-    printList() {
-        let printTable = [];
-        for (const item of this.#list.keys()) {
-            printTable.push({ item: item, size: this.#list.get(item).size })
-        }
-        console.table(printTable);
-    }
-    [Symbol.iterator](param) {
-        console.log(`iterator:`, param);
-        let n = 0;
-        let done = false;
-        console.log(this.#list.values());
-        return {
-            next() {
-                if (n == 100) { done = true }
-                n += 10;
-                return { value: n, done: done };
-            },
-            return() {
-                return { done: true };
-            }
-        };
-    }
-}
-const TypeList = new TTypeList();
 
-let sizeType = 0;
-TypeList.add = new TType('void', 0);
-sizeType = 1;
-for (const typwName of ['byte', 'char', 'TINYINT', 'BOOL', 'BOOLEAN', 'INT1', 'int8', 'uint8']) {
-    TypeList.add = new TType(typwName, sizeType);
-}
-sizeType *= 2; /** 2 */
-for (const typwName of ['wchar_t', 'int16', 'uint16', 'short int', 'unsigned short int', 'signed short int']) {
-    TypeList.add = new TType(typwName, sizeType);
-}
-sizeType *= 2; /** 4 */
-for (const typwName of ['float', 'int32', 'uint32', 'int', 'unsigned int', 'signed int']) {
-    TypeList.add = new TType(typwName, sizeType);
-}
-sizeType *= 2; /** 8 */
-for (const typwName of ['double', 'unsigned long long int', 'long long int', 'unsigned long int', 'signed long int', 'long int']) {
-    TypeList.add = new TType(typwName, sizeType);
-}
-sizeType = 12; /** 12 */
-for (const typwName of ['long double']) {
-    TypeList.add = new TType(typwName, sizeType);
-}
-sizeType = undefined;
-TypeList.printList();
-console.log([...TypeList]);
+/** @type {Map<String,JSType | JSStruct>} */
+var GlobalListTypes = new Map();
 
-class TStruct extends EventTarget {
-    constructor(name = '') {
+export class JSType extends EventTarget {
+    #name; #size;
+    get name() { return this.name };
+    get size() { return this.#size };
+    /** @param {CustomEvent} event */
+    #setSize(event) {
+        let { detail } = event;
+        this.#size = Number(detail) ?? 0;
+    }
+    /** @param {String} name @param {Number?} size */
+    constructor(name, size = 0) {
         super();
+        if (GlobalListTypes.has(name)){ throw 'Data type already registered'; };
+        this.#name = name;
+        this.#size = size;
+        this.addEventListener('setSize', this.#setSize);
+        GlobalListTypes.set(this.#name, this);
     }
-    new() { }
 }
 
-export const struct = new TStruct();
+export class JSStruct extends JSType {
+    #rootFields;
+    /** @param {String} name @param {[JSType|JSStruct]} ArrayTypes */
+    constructor(name, ArrayTypes) {
+        super(name, 0);
+        this.#rootFields = ArrayTypes.slice();
+        let localTotalSize = 0;
+        for (const itemType of ArrayTypes) {
+            if (itemType.constructor.name == 'JSType' || itemType.constructor.name == 'JSStruct') {
+                localTotalSize = localTotalSize + itemType.size;
+            };
+        };
+        this.dispatchEvent(new CustomEvent('setSize', { detail: localTotalSize }));
+    }
+}
