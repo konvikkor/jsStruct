@@ -1,20 +1,20 @@
-import { JSStruct, JSType, JSTypesList } from "./jsModule/jsStruct.js";
+import { JSRegister, JSStruct, JSType, JSTypesList, JSVariable } from "./jsModule/jsStruct.js";
 
-let test1JSType = new JSType('int8',1);
-console.log(test1JSType,test1JSType.size);
-let test2JSType = new JSType('int16',2);
-console.log(test2JSType,test2JSType.size);
-let test3JSType = new JSType('int32',4);
-console.log(test3JSType,test3JSType.size);
-let test4JSType = new JSType('int64',8);
-console.log(test4JSType,test4JSType.size);
-
-let testJSStruct = new JSStruct('myStruct',[
+JSRegister.type('int8',1);
+JSRegister.type('int16',2);
+JSRegister.type('int32',4);
+JSRegister.type('int64',8);
+JSRegister.struct('myStruct',[
     {name:'test',type:'int8'},
     {name:'test2',type:'int16'}
 ]);
-console.log(testJSStruct, testJSStruct.size);
 console.log(JSTypesList);
-for (const item of testJSStruct) {
-    console.log(item)
-}
+let localVar = new JSVariable('myStruct');
+console.log(localVar);
+console.log(localVar.test,localVar.test.AsInt8);
+console.log(localVar.test2,localVar.test2.AsInt8);
+localVar.test2.AsInt8 = 255;
+localVar.test.AsInt8 = 155;
+console.log(localVar.test2,localVar.test);
+console.log(localVar.test2.value,localVar.test.value);
+
