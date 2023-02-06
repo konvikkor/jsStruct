@@ -42,13 +42,13 @@ export class JSStruct extends JSType {
         super(name, 0);
         this.#rootFields = ArrayTypes.filter((v) => { return (v.name != '' && v.type != '') }).slice().map(v => {
             let itemType = JSTypesList.get(v.type);
-            if (itemType.constructor.name == 'JSType' || itemType.constructor.name == 'JSStruct') { v.type = itemType; };
+            if (itemType?.constructor?.name == 'JSType' || itemType?.constructor?.name == 'JSStruct') { v.type = itemType; };
             return v;
         });
         let localTotalSize = 0;
         for (let item of ArrayTypes) {
             if (Object.keys(item).length != 2) { continue; }
-            if (item.type.constructor.name == 'JSType' || item.type.constructor.name == 'JSStruct') {
+            if (item?.type?.constructor?.name == 'JSType' || item?.type?.constructor?.name == 'JSStruct') {
                 localTotalSize = localTotalSize + item.type.size;
             };
         };
@@ -75,31 +75,37 @@ export class JSRegister {
     static struct(name, fields) { if (!JSTypesList.has(name)) { let localJSType = new JSStruct(name, fields); }; };
 }
 
+export const JSConfig = {
+    littleEndian: true
+}
+
 export class JSValue extends EventTarget {
     #value; #localView;
     /** @param {ArrayBuffer|Uint8Array} value */
     constructor(value) {
         super();
         this.#value = value;
-        this.#localView = new DataView(value.buffer, value.byteOffset,value.byteLength);
+        this.#localView = new DataView(value.buffer, value.byteOffset, value.byteLength);
     }
-    get value() { return new Uint8Array(this.#value,0); };
+    get value() { return new Uint8Array(this.#value, 0); };
+    get AsString() { return new TextDecoder().decode(new Uint8Array(this.#localView.buffer, this.#localView.byteOffset, this.#localView.byteLength)); };
+    set AsString(text) { return new Uint8Array(this.#localView.buffer, this.#localView.byteOffset, this.#localView.byteLength).set(text); };
     get AsUint8() { return this.#localView.getUint8(0); };
     get AsInt8() { return this.#localView.getInt8(0); };
-    set AsUint8(value) { return this.#localView.setUint8(0,value); };
-    set AsInt8(value) { return this.#localView.setInt8(0,value); };
-    get AsUint16() { return this.#localView.getUint16(0); };
-    get AsInt16() { return this.#localView.getInt16(0); };
-    set AsUint16(value) { return this.#localView.setUint16(0,value); };
-    set AsInt16(value) { return this.#localView.setInt16(0,value); };
-    get AsUint32() { return this.#localView.getUint32(0); };
-    get AsInt32() { return this.#localView.getInt32(0); };
-    set AsUint32(value) { return this.#localView.setUint32(0,value); };
-    set AsInt32(value) { return this.#localView.setInt32(0,value); };
-    get AsUint64() { return this.#localView.getBigUint64(0); };
-    get AsInt64() { return this.#localView.getBigInt64(0); };
-    set AsUint64(value) { return this.#localView.setBigUint64(0,value); };
-    set AsInt64(value) { return this.#localView.setBigInt64(0,value); };
+    set AsUint8(value) { return this.#localView.setUint8(0, value); };
+    set AsInt8(value) { return this.#localView.setInt8(0, value); };
+    get AsUint16() { return this.#localView.getUint16(0, JSConfig.littleEndian); };
+    get AsInt16() { return this.#localView.getInt16(0, JSConfig.littleEndian); };
+    set AsUint16(value) { return this.#localView.setUint16(0, value, JSConfig.littleEndian); };
+    set AsInt16(value) { return this.#localView.setInt16(0, value, JSConfig.littleEndian); };
+    get AsUint32() { return this.#localView.getUint32(0, JSConfig.littleEndian); };
+    get AsInt32() { return this.#localView.getInt32(0, JSConfig.littleEndian); };
+    set AsUint32(value) { return this.#localView.setUint32(0, value, JSConfig.littleEndian); };
+    set AsInt32(value) { return this.#localView.setInt32(0, value, JSConfig.littleEndian); };
+    get AsUint64() { return this.#localView.getBigUint64(0, JSConfig.littleEndian); };
+    get AsInt64() { return this.#localView.getBigInt64(0, JSConfig.littleEndian); };
+    set AsUint64(value) { return this.#localView.setBigUint64(0, value, JSConfig.littleEndian); };
+    set AsInt64(value) { return this.#localView.setBigInt64(0, value, JSConfig.littleEndian); };
 }
 
 export class JSVariable extends EventTarget {
@@ -119,7 +125,7 @@ export class JSVariable extends EventTarget {
                     let calcOffset = 0;
                     for (let index = 0; index <= findIndex; index++) {
                         let element = localTMPArray[index];
-                        if (element.name == name){ break; }
+                        if (element.name == name) { break; }
                         calcOffset = calcOffset + element.type.size;
                     };
                     let localData = new JSValue(new Uint8Array(this.#localMemory, calcOffset, type.size));
@@ -131,5 +137,11 @@ export class JSVariable extends EventTarget {
             }
         }
     }
+    /** @returns {ArrayBuffer?} */
     getMemory() { return this.#localMemory; }
+    setMemory(Memory, byteOffset = 0) {
+        (new Uint8Array(this.#localMemory)).set(new Uint8Array(Memory, byteOffset, this.#localMemory.byteLength));
+        this.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+        return this;
+    }
 }
